@@ -51,7 +51,6 @@ FROM orders o
 LEFT JOIN customers c
 ON o.customer_id = c.id;
 '''
-
 result3 = psql.sqldf(query3, locals())
 #print(result3)
 
@@ -66,7 +65,6 @@ FROM orders o
 LEFT JOIN customers c ON o.customer_id = c.id
 LEFT JOIN order_items oi ON o.id = oi.order_id
 LEFT JOIN products p ON oi.product_id = p.id;
-
 '''
 result4 = psql.sqldf(query4, locals())
 #print(result4)
@@ -76,17 +74,17 @@ query5 = '''
 SELECT o.id AS order_id, 
        c.name AS customer_name, 
        p.name AS product_name, 
-       o.order_date, 
-       o.amount
+       o.order_date,
+       o.amount,
+       (o.amount * p.price) AS quantity
 FROM orders o
 LEFT JOIN customers c ON o.customer_id = c.id
 LEFT JOIN order_items oi ON o.id = oi.order_id
 LEFT JOIN products p ON oi.product_id = p.id
 WHERE customer_name = 'Bob';
-
 '''
 result5 = psql.sqldf(query5, locals())
-# print(result5)
+#print(result5)
 
 #6 
 query6 = '''
@@ -99,16 +97,38 @@ LEFT JOIN order_items oi ON o.id = oi.order_id
 LEFT JOIN products p ON oi.product_id = p.id
 GROUP BY c.name
 ORDER BY total_spend DESC 
-
+LIMIT 2;
 '''
 #LIMIT 2;
 result6 = psql.sqldf(query6, locals())
 #print(result6)
 
+
+#7 test.
+query7b = '''
+
+SELECT c.name AS customer_name, 
+       SUM(o.amount * p.price) AS total_spend_2_months
+FROM orders o
+LEFT JOIN customers c ON o.customer_id = c.id
+LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE o.order_date >= '2022-02-01' AND o.order_date < '2022-04-01'
+GROUP BY c.name;
+'''
+result7b = psql.sqldf(query7b, locals())
+#print(result7b)
+
+
 #7 
 query7 = '''
+WITH unique_users_count AS (
+    SELECT COUNT(DISTINCT c.id) AS unique_users
+    FROM customers c
+    LEFT JOIN orders o ON c.id=o.customer_id
+)
 SELECT c.name AS customer_name, 
-       SUM(o.amount * p.price) / COUNT(DISTINCT strftime('%Y-%m', o.order_date)) AS ARPU 
+       SUM(o.amount * p.price) / (SELECT unique_users FROM unique_users_count) AS ARPU
 FROM orders o
 LEFT JOIN customers c ON o.customer_id = c.id
 LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -116,31 +136,17 @@ LEFT JOIN products p ON oi.product_id = p.id
 WHERE o.order_date >= '2022-02-01' AND o.order_date < '2022-04-01'
 GROUP BY c.name;
 '''
-
 result7 = psql.sqldf(query7, locals())
 #print(result7)
-
-query7a = '''
-SELECT c.name AS customer_name, 
-       (SUM(o.amount * p.price) / 2) AS ARPU 
-FROM orders o
-LEFT JOIN customers c ON o.customer_id = c.id
-LEFT JOIN order_items oi ON o.id = oi.order_id
-LEFT JOIN products p ON oi.product_id = p.id
-WHERE o.order_date >= '2022-02-01' AND o.order_date < '2022-04-01'
-GROUP BY c.name;
-'''
-result7a = psql.sqldf(query7a, locals())
-#print(result7a)
 
 
 #8 
 query8 = '''
-SELECT c.id, c.name, MIN(o.order_date) AS order_date
+SELECT c.id, c.name AS customer_name, MIN(o.order_date) AS order_date
 FROM customers c
 LEFT JOIN orders o
 ON c.id = o.customer_id
-GROUP BY c.id
+GROUP BY c.id;
 '''
 result8 = psql.sqldf(query8, locals())
 #print(result8)
@@ -166,17 +172,13 @@ WITH ranked_orders AS (
 SELECT 
     c.id AS customer_id,
     c.name AS customer_name,
-    order_date,
-    next_order_date,
     ROUND(AVG(julianday(next_order_date) - julianday(order_date))) AS avg_duration_days
 FROM ranked_orders ro
 LEFT JOIN customers c ON ro.customer_id = c.id
 WHERE ro.next_order_date IS NOT NULL
 GROUP BY c.name
-
 ORDER BY customer_id;
-
 '''
 ## Note: DATEDIFF only exists in MySQL, 
 result9 = psql.sqldf(query9, locals())
-print(result9)
+#print(result9)
