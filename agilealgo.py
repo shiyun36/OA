@@ -4,7 +4,7 @@ import pandas as pd
 #docker pull neo4j
 #Q1 numbers keep changing, Q2 getting connection error
 
-uri =   "neo4j+s://27779763.databases.neo4j.io" #neo4j+s://74146678.databases.neo4j.io"  # or bolt://localhost:7687 for local 
+uri =  "neo4j+s://27779763.databases.neo4j.io" #"neo4j+s://27779763.databases.neo4j.io" #"neo4j+s://74146678.databases.neo4j.io"  # or bolt://localhost:7687 for local 
 username = "neo4j"
 password = "TOCv55tlTImLlACrhOEm9o_zph13D6LkpsaAOnTjnW4"
 
@@ -79,6 +79,20 @@ def create_graph(tx):
             CREATE (c)-[:hasAction {status: $status}]->(:Action {name: $action})
             """, case_id=row['CaseID'], action=row['Action'], status=row['Status'])
 
+def print_relationships(tx):
+    query = """
+    MATCH (p:Person)-[r]->(n)
+    RETURN p.name AS Person, type(r) AS Relationship, n.name AS RelatedNode
+    UNION
+    MATCH (c:Case)-[r]->(a:Action)
+    RETURN c.id AS Person, type(r) AS Relationship, a.name AS RelatedNode
+    """
+    result = tx.run(query)
+    for record in result:
+        print(f"{record['Person']} -[{record['Relationship']}]-> {record['RelatedNode']}")
+
+
+
 #1a) How many people are in the LOB department?
 def get_lob_count(tx):
     result = tx.run("MATCH (p:Person {department: 'LOB'}) RETURN count(p) AS count")
@@ -94,6 +108,7 @@ def get_hr_cases(tx):
 
 with driver.session() as session:
     session.execute_write(create_graph)
+    session.execute_read(print_relationships)
     lob_count = session.execute_read(get_lob_count)
     print(f"Number of people in LOB department: {lob_count}")
     hr_case_count = session.execute_read(get_hr_cases)
