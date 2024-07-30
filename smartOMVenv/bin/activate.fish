@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/Users/chienshiyun/OA/OA/smartOMVenv"
+set -gx VIRTUAL_ENV "/Users/chienshiyun/Documents/OA/smartOMVenv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH
